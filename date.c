@@ -52,8 +52,7 @@ static time_t gm_time_t(timestamp_t time, int tz)
 		if (unsigned_add_overflows(time, minutes * 60))
 			die("Timestamp+tz too large: %"PRItime" +%04d",
 			    time, tz);
-	} else if (time < -minutes * 60)
-		die("Timestamp before Unix epoch: %"PRItime" %04d", time, tz);
+	}
 	time += minutes * 60;
 	if (date_overflows(time))
 		die("Timestamp too large for this system: %"PRItime, time);
@@ -87,7 +86,7 @@ static int local_time_tzoffset(time_t t, struct tm *tm)
 	int offset, eastwest;
 
 	localtime_r(&t, tm);
-	t_local = tm_to_time_t(tm);
+	t_local = timegm(tm);
 	if (t_local == -1)
 		return 0; /* error; just use +0000 */
 	if (t_local < t) {
@@ -511,7 +510,7 @@ static int set_date(int year, int month, int day, struct tm *now_tm, time_t now,
 				return 1;
 			r->tm_year = now_tm->tm_year;
 		}
-		else if (year >= 1970 && year < 2100)
+		else if (year >= 1700 && year < 2100)
 			r->tm_year = year - 1900;
 		else if (year > 70 && year < 100)
 			r->tm_year = year;
@@ -522,7 +521,7 @@ static int set_date(int year, int month, int day, struct tm *now_tm, time_t now,
 		if (!now_tm)
 			return 0;
 
-		specified = tm_to_time_t(r);
+		specified = timegm(r);
 
 		/* Be it commit time or author time, it does not make
 		 * sense to specify timestamp way into the future.  Make
@@ -807,7 +806,7 @@ static int match_object_header_date(const char *date, timestamp_t *timestamp, in
 	timestamp_t stamp;
 	int ofs;
 
-	if (*date < '0' || '9' < *date)
+	if ((*date < '0' || '9' < *date) && *date != '-')
 		return -1;
 	stamp = parse_timestamp(date, &end, 10);
 	if (*end != ' ' || stamp == TIME_MAX || (end[1] != '+' && end[1] != '-'))
@@ -876,7 +875,7 @@ int parse_date_basic(const char *date, timestamp_t *timestamp, int *offset)
 	}
 
 	/* do not use mktime(), which uses local timezone, here */
-	*timestamp = tm_to_time_t(&tm);
+	*timestamp = timegm(&tm);
 	if (*timestamp == -1)
 		return -1;
 
@@ -1006,7 +1005,7 @@ void datestamp(struct strbuf *out)
 
 	time(&now);
 
-	offset = tm_to_time_t(localtime_r(&now, &tm)) - now;
+	offset = timegm(localtime_r(&now, &tm)) - now;
 	offset /= 60;
 
 	date_string(now, offset, out);

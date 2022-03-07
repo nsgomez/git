@@ -323,7 +323,7 @@ int split_ident_line(struct ident_split *split, const char *line, int len)
 	if (line + len <= cp)
 		goto person_only;
 	split->date_begin = cp;
-	span = strspn(cp, "0123456789");
+	span = strspn(cp, "-0123456789");
 	if (!span)
 		goto person_only;
 	split->date_end = split->date_begin + span;
